@@ -59,7 +59,7 @@ $ helm install ingress-nginx ingress-nginx/ingress-nginx
 
 ## Passo7: Criar uma variável de ambiente com o IP:
 ```
-$ kubectl get pods -n ingress-nginx
+$ kubectl get services -n ingress-nginx
 $ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n ingress-nginx ingress-nginx-controller)
 ```
 
