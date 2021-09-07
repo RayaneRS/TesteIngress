@@ -1,4 +1,4 @@
-Teste de http utilizando o Ingress Controller NGINX:
+# Teste de http utilizando o Ingress Controller NGINX:
 
 ## Passo1: Criação do cluster
 
@@ -59,8 +59,8 @@ $ helm install ingress-nginx ingress-nginx/ingress-nginx
 
 ## Passo7: Criar uma variável de ambiente com o IP:
 ```
-$ kubectl get services
-$ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n nginx nginx-proxy)
+$ kubectl get pods -n ingress-nginx
+$ export PROXY_IP=$(kubectl get -o jsonpath="{.status.loadBalancer.ingress[0].ip}" service -n ingress-nginx ingress-nginx-controller)
 ```
 
 ## Passo7: Service e Deployment:
