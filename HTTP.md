@@ -4,7 +4,7 @@
 
 ```
 $ gcloud config set compute/zone southamerica-east1-a
-$ gcloud container clusters create <NomedoCluster> --num-nodes=2
+$ gcloud container clusters create teste --num-nodes=2
 ```
 
 Ou criar pela interface.
@@ -26,7 +26,7 @@ Foi necessário desabilitar a opção Balanceamento de carga HTTP do cluster cri
 
 ## Passo4: Conectar ao Cluster:
 ```
-$ gcloud container clusters get-credentials <NomedoCluster> --zone southamerica-east1-a --project <IDProjeto>
+$ gcloud container clusters get-credentials teste --zone southamerica-east1-a --project <IDProjeto>
 ```
  
 ## Passo5: Configurar o controle de acesso com base em papéis:
@@ -42,7 +42,7 @@ roleRef:
   name: cluster-admin
 subjects:
 - kind: User
-  name: douglas.santos@aluno.ufr.edu.br 
+  name: <Email> 
   namespace: kube-system" | kubectl apply -f -
 ```
 
@@ -74,12 +74,7 @@ $ helm install kong/kong --generate-name --set ingressController.installCRDs=fal
 $ helm repo add haproxytech https://haproxytech.github.io/helm-charts
 $ helm repo update
 $ helm install kubernetes-ingress haproxytech/kubernetes-ingress \
-  --set controller.imageCredentials.registry=kubernetes-registry.haproxy.com \
-  --set controller.imageCredentials.username=<KEY> \
-  --set controller.imageCredentials.password=<KEY> \
-  --set controller.image.repository=kubernetes-registry.haproxy.com/hapee-ingress \
-  --set controller.image.tag=latest \
-  --set controller.service.type=LoadBalancer
+    --set controller.service.type=LoadBalancer
 ```
 ## Passo7: Criar uma variável de ambiente com o IP:
 ```
@@ -174,7 +169,46 @@ spec:
           servicePort: 80
 EOF
 ```
-
+ou 
+```
+cat <<EOF | kubectl create -f -
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: demo
+  annotations:
+    kubernetes.io/ingress.class: "kong" 
+spec:
+  rules:
+  - host: ${EXEMPLO_IP}.nip.io
+    http:
+      paths:
+      - path: /teste
+        backend:
+          serviceName: echo
+          servicePort: 80
+EOF
+```
+ou
+```
+cat <<EOF | kubectl create -f -
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: demo
+  annotations:
+    kubernetes.io/ingress.class: "haproxy" 
+spec:
+  rules:
+  - host: ${EXEMPLO_IP}.nip.io
+    http:
+      paths:
+      - path: /teste
+        backend:
+          serviceName: echo
+          servicePort: 80
+EOF
+```
 
 ## Passo9: Testar a conexão:
 ```
