@@ -188,7 +188,7 @@ EOF
 ```
 $ curl -i $EXEMPLO_IP/foo
 ```
-
+```
 curl -i -N -H "Connection: Upgrade" \
         -H "Upgrade: websocket" \
         -H "Origin: http://localhost" \
