@@ -1,4 +1,4 @@
-# Teste de http utilizando o Ingress Controller NGINX:
+# Teste de http utilizando o Ingress Controller NGINX,KONG e HAPROXY:
 
 ## Passo1: Criação do cluster
 
@@ -212,7 +212,7 @@ EOF
 
 ## Passo9: Testar a conexão:
 ```
-$ curl -i $EXEMPLO_IP/foo
+$ curl -i $EXEMPLO_IP/teste
 ```
 
 ## Passo10: Instalar benchmark (ApacheBench):
@@ -223,12 +223,13 @@ $ sudo apt-get install apache2-utils
 
 ## Passo11: Executar AB:
 ```
-$ ab -k -n 50000 -c 100 -t 20 http://$EXEMPLO_IP/foo
+$ ab -k -n 50000 -c 100 -t 20 http://$EXEMPLO_IP/teste
 ```
 
 ```
--K : Habilite o recurso HTTP KeepAlive, ou seja, execute várias solicitações em uma sessão HTTP. O padrão não é KeepAlive.
--C : Número de várias solicitações a serem executadas ao mesmo tempo. O padrão é uma solicitação por vez.
--T : Número máximo de segundos para gastar no benchmarking. Isso implica um -n 50000 internamente. Use isso para avaliar o servidor em um período fixo de tempo total. Por padrão, não há limite de tempo.
+-k : Habilite o recurso HTTP KeepAlive, ou seja, execute várias solicitações em uma sessão HTTP. O padrão não é KeepAlive.
+-n : Número de solicitações a serem executadas para a sessão de benchmarking. O padrão é apenas executar uma única solicitação, o que geralmente leva a resultados de benchmarking não representativos.
+-c : Número de várias solicitações a serem executadas ao mesmo tempo. O padrão é uma solicitação por vez.
+-t : Número máximo de segundos para gastar no benchmarking. Isso implica um -n 50000 internamente. Use isso para avaliar o servidor em um período fixo de tempo total. Por padrão, não há limite de tempo.
 ```
 
