@@ -1,4 +1,6 @@
-# Teste de protocolo em Ingress Controller.
+# Teste carga de Ingress Controller.
 
-Utilizar a plataforma GKE para instalar um ingress controller (Nginx, Kong, HAproxy...) e apontar ao serviço. Utilizar um benchmark para testar o desempenho de seu serviço http, grpc e websockets. Repetir o procedimento para outros 2 ingress controller.
+- Plataforma: GKE;
+- Ingress: NGINX, HAProxy, Traefik, Kong;
+- Protocolos: HTTP e Websocket.
  
