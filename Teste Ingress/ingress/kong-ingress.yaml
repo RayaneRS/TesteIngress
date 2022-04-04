@@ -1,0 +1,62 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress-kong
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+spec:
+  #ingressClassName: kong
+  #tls:
+  #- secretName: cert-tls
+  #  hosts:
+  #    - http.k8s.test
+  rules:
+  - host: http-kong.duckdns.org
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: http-server-service
+            port:
+              name: svc-port
+
+---
+kind: KongIngress
+apiVersion: configuration.konghq.com/v1
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+  name: timeout-kong-ingress
+proxy:
+  protocol: http
+  connect_timeout: 360000
+  read_timeout: 360000
+  write_timeout: 360000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: websocket-ingress-kong
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+spec:
+  #ingressClassName: kong
+  #tls:
+  #- secretName: cert-tls
+  #  hosts:
+  #    - websocket.k8s.test
+  #    - websocket2.k8s.test
+  rules:
+  - host: ws-kong.duckdns.org
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: websocket2-service
+            port:
+              name: svc-port

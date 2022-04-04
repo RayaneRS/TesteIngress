@@ -1,0 +1,69 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress-nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    ingress.kubernetes.io/ssl-redirect: "false"
+    #kubernetes.io/ingress.global-static-ip-name: http-nginx-ip
+    #cert-manager.io/cluster-issuer: letsencrypt-prod
+    #acme.cert-manager.io/http01-edit-in-place: "true"
+spec:
+  #ingressClassName: nginx
+  #tls:
+  #- secretName: http-nginx-cert-tls
+    #hosts:
+      #- http-nginx.duckdns.org
+  rules:
+  - host: http-nginx.duckdns.org
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: http-server-service
+            port:
+              name: svc-port
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: websocket-ingress-nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    ingress.kubernetes.io/ssl-redirect: "false"
+    #kubernetes.io/ingress.global-static-ip-name: ws-nginx-ip
+    #cert-manager.io/cluster-issuer: letsencrypt-prod
+    #acme.cert-manager.io/http01-edit-in-place: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/server-snippets: |
+     location / {
+     proxy_set_header Upgrade $http_upgrade;
+     proxy_http_version 1.1;
+     proxy_set_header X-Forwarded-Host $http_host;
+     proxy_set_header X-Forwarded-Proto $scheme;
+     proxy_set_header X-Forwarded-For $remote_addr;
+     proxy_set_header Host $host;
+     proxy_set_header Connection "upgrade";
+     proxy_cache_bypass $http_upgrade;
+     }
+spec:
+  #ingressClassName: nginx
+  #tls:
+  #- secretName: ws-nginx-cert-tls
+  #  hosts:
+  #  - ws-nginx.duckdns.org
+  rules:
+  - host: ws-nginx.duckdns.org
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: websocket2-service
+            port:
+              name: svc-port

@@ -1,0 +1,275 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: haproxy-controller
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: haproxy-controller
+  namespace: haproxy-controller
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: haproxy-controller
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - endpoints
+      - nodes
+      - pods
+      - secrets
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "extensions"
+      - "networking.k8s.io"
+    resources:
+      - ingresses
+      - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - "extensions"
+      - "networking.k8s.io"
+    resources:
+      - ingresses/status
+      - ingressclasses
+    verbs:
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: haproxy-controller
+  namespace: haproxy-controller
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - pods
+      - secrets
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - endpoints
+    verbs:
+      - get
+      - create
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: haproxy-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: haproxy-controller
+subjects:
+  - kind: ServiceAccount
+    name: haproxy-controller
+    namespace: haproxy-controller
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: haproxy-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: haproxy-controller
+  namespace: haproxy-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: haproxy-controller
+subjects:
+  - kind: ServiceAccount
+    name: haproxy-controller
+    namespace: haproxy-controller
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: haproxy-controller
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy-config
+  namespace: haproxy-controller
+data:
+  syslog-endpoint: "localhost:514"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: ingress-default-backend
+  name: ingress-default-backend
+  namespace: haproxy-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: ingress-default-backend
+  template:
+    metadata:
+      labels:
+        run: ingress-default-backend
+    spec:
+      containers:
+      - name: ingress-default-backend
+        image: gcr.io/google_containers/defaultbackend:1.0
+        ports:
+        - containerPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: ingress-default-backend
+  name: ingress-default-backend
+  namespace: haproxy-controller
+spec:
+  selector:
+    run: ingress-default-backend
+  ports:
+  - name: port-1
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: haproxy-ingress
+  name: haproxy-ingress
+  namespace: haproxy-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: haproxy-ingress
+  template:
+    metadata:
+      labels:
+        run: haproxy-ingress
+    spec:
+      serviceAccountName: haproxy-controller
+      containers:
+      - name: haproxy-ingress
+        image: quay.io/jcmoraisjr/haproxy-ingress:v0.12.9
+        args:
+        - --ingress-class=haproxy
+        - --default-backend-service=$(POD_NAMESPACE)/ingress-default-backend
+        - --configmap=$(POD_NAMESPACE)/haproxy-config
+        - --sort-backends
+        ports:
+        - name: http
+          containerPort: 80
+        - name: https
+          containerPort: 443
+        - name: stat
+          containerPort: 1936
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+          limits:
+            cpu: 500m
+            memory: 300Mi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 10253
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+      - name: access-logs
+        image: whereisaaron/kube-syslog-sidecar
+        ports:
+          - name: udp
+            containerPort: 514
+            protocol: UDP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: haproxy-ingress
+  name: haproxy-ingress
+  namespace: haproxy-controller
+spec:
+  selector:
+    run: haproxy-ingress
+    #type: NodePort
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 80
+    #nodePort: 30080
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 443
+    #nodePort: 30443

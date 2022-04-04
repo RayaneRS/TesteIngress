@@ -1,0 +1,53 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress-traefik
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    #kubernetes.io/ingress.global-static-ip-name: http-traefik-ip
+    #cert-manager.io/cluster-issuer: letsencrypt-prod
+    #acme.cert-manager.io/http01-edit-in-place: "true"
+spec:
+  #tls:
+  #- secretName: http-traefik-cert-tls
+    #hosts:
+      #- http-traefik.duckdns.org
+  rules:
+  - host: http-traefik.duckdns.org
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: http-server-service
+            port:
+              name: svc-port
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: websocket-ingress-traefik
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    #kubernetes.io/ingress.global-static-ip-name: ws-traefik-ip
+    #cert-manager.io/cluster-issuer: letsencrypt-prod
+    #acme.cert-manager.io/http01-edit-in-place: "true"
+spec:
+  #tls:
+  #- secretName: ws-traefik-cert-tls
+    #hosts:
+      #- ws-traefik.duckdns.org
+  rules:
+  - host: ws-traefik.duckdns.org
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: websocket2-service
+            port:
+              name: svc-port

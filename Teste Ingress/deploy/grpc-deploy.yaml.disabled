@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-server-service
+  annotations:
+    konghq.com/protocol: grpc
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 50051
+    name: svc-port
+  selector:
+    app: grpc-server
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-server-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-server
+  template:
+    metadata:
+      labels:
+        app: grpc-server
+    spec:
+      containers:
+      - name: grpc-server
+        image: golang:alpine
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - mkdir /go/src/greeter-server;
+          cd /go/src/greeter-server;
+          wget -O main.go https://raw.githubusercontent.com/grpc/grpc-go/91e0aeb192456225adf27966d04ada4cf8599915/examples/features/reflection/server/main.go;
+          go mod init greeter-server;
+          go mod tidy;
+          go build -o /greeter-server main.go;
+          /greeter-server
+        env:
+        - name: GODEBUG
+          value: "http2debug=2"
+        ports:
+        - containerPort: 50051
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc2-server-service
+  annotations:
+    konghq.com/protocol: grpc
+spec:
+  ports:
+  - name: svc-port
+    port: 80
+    targetPort: 9000
+  - name: svc-port-secure
+    port: 443
+    targetPort: 9001
+  selector:
+    app: grpcbin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc2-server-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpcbin
+  template:
+    metadata:
+      labels:
+        app: grpcbin
+    spec:
+      containers:
+      - image: moul/grpcbin
+        name: grpcbin
+        ports:
+        - containerPort: 9000
+        - containerPort: 9001
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-client-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-client
+  template:
+    metadata:
+      labels:
+        app: grpc-client
+    spec:
+      containers:
+      - name: grpc-client
+        image: alpine:3
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - wget https://github.com/fullstorydev/grpcurl/releases/download/v1.8.5/grpcurl_1.8.5_linux_x86_64.tar.gz -O grpcurl_1.8.5_linux_x86_64.tar.gz;
+          tar zxvf grpcurl_1.8.5_linux_x86_64.tar.gz -C /usr/local/bin/;
+          rm -rf grpcurl_1.8.5_linux_x86_64.tar.gz;
+          echo "grpcurl -plaintext grpc-server-service:80 helloworld.Greeter/SayHello";
+          sleep infinity
+        env:
+        - name: GODEBUG
+          value: "http2debug=2"

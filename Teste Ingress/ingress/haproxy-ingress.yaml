@@ -1,0 +1,65 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress-haproxy
+  annotations:
+    kubernetes.io/ingress.class: "haproxy"
+    ingress.kubernetes.io/ssl-redirect: "false"
+    #kubernetes.io/ingress.global-static-ip-name: http-ip
+    #cert-manager.io/cluster-issuer: letsencrypt-prod
+    #acme.cert-manager.io/http01-edit-in-place: "true"
+spec:
+  #ingressClassName: haproxy
+  #tls:
+  #- secretName: http-cert-secret
+    #hosts:
+      #- http-haproxy.duckdns.org
+  rules:
+  - host: http-haproxy.duckdns.org
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: http-server-service
+            port:
+              name: svc-port
+      - pathType: Prefix
+        path: /app
+        backend:
+          service:
+            name: http-server2-service
+            port:
+              name: svc-port
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: websocket-ingress-haproxy
+  annotations:
+    kubernetes.io/ingress.class: haproxy
+    ingress.kubernetes.io/ssl-redirect: "false"
+    ingress.kubernetes.io/timeout-tunnel: "3600"
+    #ingress.kubernetes.io/ssl-redirect: "true"
+    #kubernetes.io/ingress.global-static-ip-name: ws-ip
+    #cert-manager.io/cluster-issuer: letsencrypt-prod
+    #acme.cert-manager.io/http01-edit-in-place: "true"
+spec:
+  #ingressClassName: haproxy
+  #tls:
+  #- secretName: ws-cert-secret
+    #hosts:
+      #- ws-haproxy.duckdns.org
+  rules:
+  - host: ws-haproxy.duckdns.org
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: websocket2-service
+            port:
+              name: svc-port

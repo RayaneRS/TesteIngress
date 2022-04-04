@@ -1,0 +1,207 @@
+#https://www.civo.com/learn/using-websockets-with-ingress-controller
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: websocket-service
+  annotations:
+    konghq.com/override: timeout-kong-ingress
+  labels:
+    app: tornado-socket
+spec:
+  type: ClusterIP
+  selector:
+    app: tornado-socket
+  ports:
+  - name: svc-port
+    protocol: TCP
+    port: 8000
+    targetPort: 8000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websocket-deploy
+  labels:
+    app: tornado-socket
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tornado-socket
+  template:
+    metadata:
+      labels:
+        app: tornado-socket
+    spec:
+      containers:
+      - name: tornado-socket
+        image: ajayinnvonix/tornado-demo
+        ports:
+        - containerPort: 8000
+
+---
+# https://websockets.readthedocs.io/en/latest/howto/kubernetes.html
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: websocket2-conf
+data:
+  app.py: |
+    #!/usr/bin/env python
+
+    import asyncio
+    import http
+    import signal
+    import sys
+    import time
+    import websockets
+
+    async def slow_echo(websocket):
+      async for message in websocket:
+          # Block the event loop! This allows saturating a single asyncio
+          # process without opening an impractical number of connections.
+          time.sleep(0.1)  # 100ms
+          await websocket.send(message)
+
+    async def health_check(path, request_headers):
+      if path == "/healthz":
+          return http.HTTPStatus.OK, [], b"OK\n"
+      if path == "/inemuri":
+          loop = asyncio.get_running_loop()
+          loop.call_later(1, time.sleep, 10)
+          return http.HTTPStatus.OK, [], b"Sleeping for 10s\n"
+      if path == "/seppuku":
+          loop = asyncio.get_running_loop()
+          loop.call_later(1, sys.exit, 69)
+          return http.HTTPStatus.OK, [], b"Terminating\n"
+
+    async def main():
+      # Set the stop condition when receiving SIGTERM.
+      loop = asyncio.get_running_loop()
+      stop = loop.create_future()
+      loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
+
+      async with websockets.serve(
+          slow_echo,
+          host="",
+          port=80,
+          process_request=health_check,
+      ):
+          await stop
+
+    if __name__ == "__main__":
+      asyncio.run(main())
+
+  benchmark.py: |
+    #!/usr/bin/env python
+
+    import asyncio
+    import sys
+    import websockets
+
+    URI = "ws://websocket2-service:80"
+
+    async def run(client_id, messages):
+        async with websockets.connect(URI) as websocket:
+            for message_id in range(messages):
+                await websocket.send("{client_id}:{message_id}")
+                await websocket.recv()
+
+    async def benchmark(clients, messages):
+        await asyncio.wait([
+            asyncio.create_task(run(client_id, messages))
+            for client_id in range(clients)
+        ])
+
+    if __name__ == "__main__":
+        clients, messages = int(sys.argv[1]), int(sys.argv[2])
+        asyncio.run(benchmark(clients, messages))
+        
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: websocket2-service
+  annotations:
+    konghq.com/override: timeout-kong-ingress
+spec:
+  ports:
+    - name: svc-port
+      protocol: TCP
+      port: 80
+      targetPort: 80
+  selector:
+    app: websockets-test
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websocket2-deploy
+spec:
+  selector:
+    matchLabels:
+      app: websockets-test
+  template:
+    metadata:
+      labels:
+        app: websockets-test
+    spec:
+      volumes:
+      - name: config
+        configMap:
+          name: websocket2-conf
+      containers:
+      - name: websocket2-deploy
+        image: python:3.9-alpine
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config
+          mountPath: /app.py
+          subPath: app.py
+        command:
+        - /bin/sh
+        - -c
+        - pip install websockets;
+          python app.py
+        #livenessProbe:
+        #  httpGet:
+        #    path: /healthz
+        #    port: 80
+        #  periodSeconds: 1
+        ports:
+        - containerPort: 80
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websocket2-client-deploy
+spec:
+  selector:
+    matchLabels:
+      app: websockets-client
+  template:
+    metadata:
+      labels:
+        app: websockets-client
+    spec:
+      volumes:
+      - name: config
+        configMap:
+          name: websocket2-conf
+      containers:
+      - name: websocket2-client-deploy
+        image: python:3.9-alpine
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: config
+          mountPath: /benchmark.py
+          subPath: benchmark.py
+        command:
+        - /bin/sh
+        - -c
+        - pip install websockets;
+          sleep infinity

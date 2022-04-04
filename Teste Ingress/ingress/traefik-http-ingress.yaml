@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress-traefik
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  #ingressClassName: kong
+  #tls:
+  #- secretName: cert-tls
+  #  hosts:
+  #    - http.k8s.test
+  rules:
+  - host: http.k8s.test
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: http-server-service
+            port:
+              name: svc-port
