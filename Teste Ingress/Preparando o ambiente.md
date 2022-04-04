@@ -1,4 +1,4 @@
-## Passo1: Criação do cluster
+## Criar o cluster
 
   ```
   gcloud config set compute/zone southamerica-east1-a
@@ -27,7 +27,7 @@
 
 Ou criar pela interface.
 
-## Passo2: Instalar HELM
+## Instalar o HELM
   ```
   curl https://baltocdn.com/helm/signing.asc | sudo apt-key add -
   sudo apt-get install apt-transport-https --yes
@@ -37,12 +37,12 @@ Ou criar pela interface.
   helm version
   ```
  
-## Passo3: Configurar o cluster GKE para os testes:
+## Configurar o cluster GKE para os testes:
 **Foi necessário desabilitar a opção Balanceamento de carga HTTP do cluster criado no passo 1:**
 * Acessar as configurações do cluster;
 * Na categoria de REDE, desabilitar a opção de Balanceamento de carga HTTP.
 
-## Passo4: Conectar ao Cluster:
+## Conectar ao Cluster:
   ```
   gcloud container clusters get-credentials teste --zone southamerica-east1-a --project $(gcloud config get-value project)
   ```
@@ -52,7 +52,7 @@ Ou criar pela interface.
       Fetching cluster endpoint and auth data.
       kubeconfig entry generated for teste.
       ```
-## Passo5: Configurar o controle de acesso com base em papéis:
+## Configurar o controle de acesso com base em papéis:
 
   ```
   kubectl create clusterrolebinding cluster-admin-binding --clusterrole cluster-admin --user $(gcloud config get-value account)
